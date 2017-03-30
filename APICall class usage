@@ -1,0 +1,562 @@
+//
+//  RCSettingsWorkerViewController.swift
+//  ReCrew
+//
+//  Created by Rahul Kalvar on 06/12/16.
+//  Copyright © 2016 eesahana. All rights reserved.
+//
+
+import UIKit
+
+
+class RCSettingsWorkerViewController: RCBaseViewController,UITableViewDataSource, UITableViewDelegate, APIDelegate, UIAlertViewDelegate {
+    
+    //    MARK: Variables / Outlets
+    
+    @IBOutlet weak var settingsWorkerTableView: UITableView!
+    
+    var constat:OAConstant!
+    var noOfJobs:RCProfileMainViewController!
+    
+    var professionWorkerAdd: NSMutableArray = NSMutableArray()
+    var professionWorkerDelete: NSMutableArray = NSMutableArray()
+    
+    var category_servedArray: NSMutableArray = NSMutableArray()
+    var not_category_servedArray: NSMutableArray = NSMutableArray()
+    
+    
+    
+    //    MARK: View Life Cycle
+    var category_Served:NSMutableArray = NSMutableArray()
+    override func viewDidLoad() {
+        
+        super.viewDidLoad()
+        // Do any additional setup after loading the view.
+        constat = OAConstant()
+        noOfJobs = RCProfileMainViewController()
+        
+        self.constat.startActivityIndicator(superView: self.view)
+        
+        self.tabBarController?.tabBar.isHidden = true
+        
+        
+        
+        
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        self.tabBarController?.tabBar.isHidden = true
+        
+        let api = APICall()
+        api.apiDelegate = self;
+        let dict = UserDefaults.standard.object(forKey: "user_Data") as! NSDictionary
+        print("dictionary data is:\(dict)")
+        let user_Id = dict.value(forKey: "user_id") as! String
+        print(user_Id)
+        api.data_request(paramString: "user_id=\(user_Id)", url: "\(OAConstant.apis.server)\(OAConstant.apis.get_user_served_category)", urlType:"POST", apiCall:"3")
+        
+        
+    }
+    
+    
+    //    MARK: Table View Methods
+    
+    func numberOfSections(in tableView: UITableView) -> Int {
+        return 6
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if section == 0 {
+            return 1
+        } else if section == 1 {
+            return 1
+        }else if section == 2 {
+            return 1
+        }else if section == 3 {
+            print(self.category_Served.count)
+            return self.category_Served.count
+        }else if section == 4 {
+            return 1
+        } else {
+            return 1
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if indexPath.section == 2 {
+            return 80
+        }else if indexPath.section == 4 {
+            return 60
+        } else {
+            return 50
+        }
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        
+        if indexPath.section == 0 {
+            let cell = self.settingsWorkerTableView.dequeueReusableCell(withIdentifier: "RCSettingsWorkerHeaderCell")as! RCSettingsWorkerHeaderCell
+            cell.selectionStyle = .none
+            
+            return cell
+            
+        }else if indexPath.section == 1 {
+            let cell = self.settingsWorkerTableView.dequeueReusableCell(withIdentifier: "RCSettingsWorkerCell")as! RCSettingsWorkerCell
+            cell.manageLicensesArrowImage.isHidden = true
+            cell.underlineLabel.isHidden = true
+            cell.professionWorkerSwitchButton.addTarget(self,action:#selector(partnerSwitchButtonClicked(_:)),for:UIControlEvents.valueChanged)
+            
+            
+            if  (UserDefaults.standard.object(forKey: "user_Data") as! NSDictionary).value(forKey: "user_type") as! String == "2"{
+                cell.professionWorkerLabel.text = "I'm a Partner"
+                cell.professionWorkerSwitchButton.isOn = true
+            }else{
+//                cell.professionWorkerLabel.text = "I'm not a Partner"
+                cell.professionWorkerSwitchButton.isOn = false
+            }
+            
+            cell.selectionStyle = .none
+            return cell
+            
+        }else if indexPath.section == 2 {
+            let cell = self.settingsWorkerTableView.dequeueReusableCell(withIdentifier: "RCSettingsWorkerHeaderCell")as! RCSettingsWorkerHeaderCell
+            cell.headerLabel.text = "SELECT YOUR PROFESSION"
+            cell.selectionStyle = .none
+            return cell
+            
+        }else if indexPath.section == 3 {
+            let cell = self.settingsWorkerTableView.dequeueReusableCell(withIdentifier: "RCSettingsWorkerCell")as! RCSettingsWorkerCell
+            cell.manageLicensesArrowImage.isHidden = true
+            cell.selectionStyle = .none
+            cell.professionWorkerSwitchButton.isHidden = false
+            cell.underlineLabel.isHidden = false
+            if (self.category_Served[indexPath.row] as! NSDictionary).value(forKey: "user_select") as! Int == 1 {
+                cell.professionWorkerSwitchButton.isOn = true
+            }else{
+                cell.professionWorkerSwitchButton.isOn = false
+                
+            }
+            
+            cell.professionWorkerLabel.text = (self.category_Served[indexPath.row] as! NSDictionary)["job_cat_name"] as? String
+            if indexPath.row == 0 {
+                cell.professionWorkerSwitchButton.addTarget(self,action:#selector(professionWorkerSwitchButtonClicked(_:)),for:UIControlEvents.valueChanged)
+                
+                //                cell.professionWorkerLabel.text = "Carpenter"
+            }else if indexPath.row == 1 {
+                cell.professionWorkerSwitchButton.addTarget(self,action:#selector(professionWorkerSwitchButtonClicked(_:)),for:UIControlEvents.valueChanged)
+                
+                //                cell.professionWorkerLabel.text = "Electrician"
+            }else if indexPath.row == 2 {
+                cell.professionWorkerSwitchButton.addTarget(self,action:#selector(professionWorkerSwitchButtonClicked(_:)),for:UIControlEvents.valueChanged)
+                
+                //                cell.professionWorkerLabel.text = "Plumber"
+            }else
+                if indexPath.row == 3 {
+                    cell.professionWorkerSwitchButton.addTarget(self,action:#selector(professionWorkerSwitchButtonClicked(_:)),for:UIControlEvents.valueChanged)
+                    
+                    //                cell.professionWorkerLabel.text = "Painter"
+                    cell.underlineLabel.isHidden = true
+            }
+            return cell
+            
+        }else if indexPath.section == 4{
+            
+            let cell1 = settingsWorkerTableView.dequeueReusableCell(withIdentifier: "notesCell")
+            cell1?.selectionStyle = .none
+            
+            //    let label: UILabel = cell1!.viewWithTag(10) as! UILabel
+            return cell1!
+        }else  {
+            let cell = self.settingsWorkerTableView.dequeueReusableCell(withIdentifier: "RCSettingsWorkerCell")as! RCSettingsWorkerCell
+            cell.professionWorkerSwitchButton.isHidden = true
+            cell.professionWorkerLabel.text = "Manage Licences"
+            cell.underlineLabel.isHidden = true
+            cell.isUserInteractionEnabled = true
+            cell.selectionStyle = .none
+            return cell
+            
+        }
+        
+    }
+    
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        if indexPath.section == 0 {
+            
+            
+        }else if indexPath.section == 1 {
+            
+            
+        }else if indexPath.section == 2 {
+            
+            
+        }else if indexPath.section == 3 {
+            
+            
+        }else if indexPath.section == 4{
+            
+        }else  {
+            let licencesScreen = self.storyboard?.instantiateViewController(withIdentifier: "RCProfileLicencesViewController")as! RCProfileLicencesViewController
+            
+            let backItem = UIBarButtonItem()
+            backItem.title = ""
+            navigationItem.backBarButtonItem = backItem // This will show in the next view controller being pushed
+            
+            let api = APICall()
+            api.apiDelegate = self;
+            let dict = UserDefaults.standard.object(forKey: "user_Data") as! NSDictionary
+            print("dictionary data is:\(dict)")
+            let user_Id = dict.value(forKey: "user_id") as! String
+            print(user_Id)
+            
+            print("not_category_servedArray:",self.not_category_servedArray)
+            print("category_servedArray:",self.category_servedArray)
+            
+            let category_servedStringRepresentation = self.category_servedArray.componentsJoined(by: ",") // "1,2,3"
+            let not_category_servedStringRepresentation = self.not_category_servedArray.componentsJoined(by: ",") // "1,2,3"
+            
+            print("category_servedStringRepresentation",category_servedStringRepresentation)
+            print("not_category_servedStringRepresentation",not_category_servedStringRepresentation)
+            
+            
+            api.data_request(paramString: "user_id=\(user_Id)&category_served=\(category_servedStringRepresentation)&not_category_served=\(not_category_servedStringRepresentation)", url: "\(OAConstant.apis.server)\(OAConstant.apis.user_served_catgeory)", urlType:"POST", apiCall:"5")
+            
+            
+            self.navigationController?.pushViewController(licencesScreen, animated: true)
+            
+        }
+        
+    }
+    
+    
+    
+    //    MARK:Custom Methods
+    
+    func partnerSwitchButtonClicked(_ myswitch: UISwitch)
+    {
+        print("professionWorkerSwitchButtonClicked")
+        let dict = UserDefaults.standard.object(forKey: "user_Data") as! NSDictionary
+        print("dictionary data is:\(dict)")
+        let user_Id = dict.value(forKey: "user_id") as! String
+        print(user_Id)
+        
+        self.constat.startActivityIndicator(superView: view)
+        
+        let api = APICall()
+        api.apiDelegate = self;
+        if dict.value(forKey: "user_type") as! String == "1"{
+            api.data_request(paramString: "user_id=\(user_Id)&user_type=\("2")", url: "\(OAConstant.apis.server)\(OAConstant.apis.change_user_type)", urlType:"POST", apiCall:"1")
+        }else{
+            api.data_request(paramString: "user_id=\(user_Id)&user_type=\("1")", url: "\(OAConstant.apis.server)\(OAConstant.apis.change_user_type)", urlType:"POST", apiCall:"2")
+        }
+    }
+    
+    
+    
+    
+    func professionWorkerSwitchButtonClicked(_ sender: UISwitch)
+    {
+        let onstate = sender.isOn
+        print("onstate", onstate)
+        let button = sender 
+        let view = button.superview!
+        let cell = view.superview as! RCSettingsWorkerCell
+        
+        print("category_Served",category_Served)
+        
+        if  (UserDefaults.standard.object(forKey: "user_Data") as! NSDictionary).value(forKey: "user_type") as! String == "1"{
+            //                cell.professionWorkerLabel.text = "I'm not a Partner"
+            let alert = UIAlertController(title: "Alert", message: "Please select the “I’m a Partner” tab above to be able to select your trade(s).", preferredStyle: UIAlertControllerStyle.alert)
+            alert.addAction(UIAlertAction(title: "Ok", style: UIAlertActionStyle.default, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+            cell.professionWorkerSwitchButton.isOn = false
+        }else {
+            
+            print("cell.professionWorkerLabel.text", cell.professionWorkerLabel.text!)
+            let indexPath = settingsWorkerTableView.indexPath(for: cell)
+//            let job_cat_id = (category_Served[indexPath] as AnyObject).value(forKey: "job_cat_id")
+
+            print("indexPath",indexPath?.row)
+            
+            //            if professionWorkerAdd.contains((indexPath?.row)!) {
+            //                professionWorkerAdd.removeObject(at: (indexPath?.row)!)
+            //                print("Array rem:",professionWorkerAdd)
+            //            }else{
+            //                professionWorkerAdd.add(at: (indexPath?.row)!)
+            //                print("Array add:",professionWorkerAdd)
+            //            }
+            
+//            if onstate == true {
+                if professionWorkerAdd.contains((indexPath?.row)!) {
+                    professionWorkerAdd.remove((indexPath?.row)!)
+                    professionWorkerDelete = professionWorkerAdd
+                    print("Array rem:",professionWorkerDelete)
+                }else {
+                    professionWorkerAdd.add((indexPath?.row)!)
+                    print("Array add:",professionWorkerAdd)
+                    
+                    noOfJobs.numberOfJobs = professionWorkerAdd
+                    print("noOfJobs.numberOfJobs",noOfJobs.numberOfJobs)
+                    
+                }
+            
+            if onstate == true {
+                self.category_servedArray.add((self.category_Served[(indexPath?.row)!] as! NSDictionary).value(forKey: "job_cat_id") as! String)
+                self.not_category_servedArray.remove((self.category_Served[(indexPath?.row)!] as! NSDictionary).value(forKey: "job_cat_id") as! String)
+            }else{
+                self.category_servedArray.remove((self.category_Served[(indexPath?.row)!] as! NSDictionary).value(forKey: "job_cat_id") as! String)
+                self.not_category_servedArray.add((self.category_Served[(indexPath?.row)!] as! NSDictionary).value(forKey: "job_cat_id") as! String)
+            }
+            print(self.category_servedArray)
+            print(self.not_category_servedArray)
+//            }else {
+//                
+//                
+//                                if professionWorkerAdd.contains((indexPath?.row)) {
+//                                    professionWorkerAdd.removeObject(at: (indexPath?.row)!)
+//                                    print("Array rem:",professionWorkerAdd)
+//                                }else {
+//                                    professionWorkerAdd.add(at: (indexPath?.row)!)
+//                                    print("Array add:",professionWorkerAdd)
+//                                }
+//            }
+            
+            //            if onstate == true {
+            //                professionWorkerAdd.add((indexPath?.row)!)//cell.professionWorkerLabel.text!)
+            //                if professionWorkerDelete != nil && professionWorkerDelete.count > 0 {
+            //
+            //                    professionWorkerDelete.removeObject(at: (indexPath?.row)!)
+            //                    print("professionWorkerAdd is :",professionWorkerAdd)
+            //                    print("professionWorkerDelete is :",professionWorkerDelete)
+            //                }else {
+            //
+            //                    print("professionWorkerAdd is :",professionWorkerAdd)
+            //                    print("professionWorkerDelete is :",professionWorkerDelete)
+            //                }
+            //
+            //            } else {
+            //                professionWorkerDelete.add((indexPath?.row)!)//cell.professionWorkerLabel.text)
+            //                if professionWorkerAdd != nil && professionWorkerAdd.count > 0 {
+            //
+            //                    professionWorkerAdd.removeObject(at: (indexPath?.row)!)
+            //                    print("professionWorkerAdd is :",professionWorkerAdd)
+            //                    print("professionWorkerDelete is :",professionWorkerDelete)
+            //                }else {
+            //
+            //                    print("professionWorkerAdd is :",professionWorkerAdd)
+            //                    print("professionWorkerDelete is :",professionWorkerDelete)
+            //                }
+            
+            
+        }
+        
+        
+        
+    }
+    
+    
+    func alertView(_ alertView: UIAlertView, clickedButtonAt buttonIndex: Int) {
+        let buttonTitle = alertView.buttonTitle(at: buttonIndex)
+        print("\(buttonTitle) pressed")
+        if buttonTitle == "Ok" {
+            
+            let api = APICall()
+            api.apiDelegate = self;
+            let dict = UserDefaults.standard.object(forKey: "user_Data") as! NSDictionary
+            print("dictionary data is:\(dict)")
+            let user_Id = dict.value(forKey: "user_id") as! String
+            print(user_Id)
+            
+            
+            api.data_request(paramString: "user_id=\(user_Id)&category_served=\(self.category_servedArray)&not_category_served=\(self.not_category_servedArray)", url: "\(OAConstant.apis.server)\(OAConstant.apis.user_served_catgeory)", urlType:"POST", apiCall:"4")
+            
+            
+        }
+        
+    }
+    
+    
+    //    MARK: API Delegates
+    
+    func apiCallSucess(response: Dictionary<String, AnyObject>,type:String) {
+        
+        //        let responseDict = response["result"] as! NSDictionary
+        //        UserDefaults.standard.set(responseDict["result"], forKey: "result")
+        
+        
+        
+        ////        Storing the array from dictionary
+        //        let responseArray = responseDict.value(forKey: "user_detail")as? NSArray
+        //        print("Response Array is:\(responseArray)")
+        ////        Storing the array into nsuserdefaults
+        //        UserDefaults.standard.set(responseArray, forKey: "arr")
+        //        UserDefaults.standard.synchronize()
+        ////      Retrieving the array from nsuserdefaults
+        //        var arraye = UserDefaults.standard.object(forKey: "arr")
+        //        print("Array data is:\(arraye)")
+        
+        DispatchQueue.main.async() {
+            
+            print("Overall Response is\(response)")
+            
+            if type == "1" {
+                var dict = UserDefaults.standard.object(forKey: "user_Data") as! Dictionary<String,AnyObject>
+                dict["user_type"] = "2" as AnyObject?
+                UserDefaults.standard.setValue(dict, forKey: "user_Data")
+                let indexPath = IndexPath(item: 0, section: 1)
+                
+                
+                let alertController = UIAlertController(title: "Recrew", message: "You will now receive notifications and updates regarding local jobs.", preferredStyle: .alert)
+                let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction) in
+                    alertController.dismiss(animated: true, completion: nil)
+                }
+                alertController.addAction(OKAction)
+                self.present(alertController, animated: true, completion:nil)
+                
+//                self.settingsWorkerTableView.reloadRows(at: [indexPath], with: .top)
+            }else if type == "2"{
+                var dict = UserDefaults.standard.object(forKey: "user_Data") as! Dictionary<String,AnyObject>
+                dict["user_type"] = "1" as AnyObject?
+                UserDefaults.standard.setValue(dict, forKey: "user_Data")
+                let indexPath = IndexPath(item: 0, section: 1)
+                
+                
+                let alertController = UIAlertController(title: "Recrew", message: "You will not receive any notifications or updates regarding local jobs.", preferredStyle: .alert)
+                let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction) in
+                    alertController.dismiss(animated: true, completion: nil)
+                }
+                alertController.addAction(OKAction)
+                self.present(alertController, animated: true, completion:nil)
+                
+//                self.settingsWorkerTableView.reloadRows(at: [indexPath], with: .top)
+            }else if type == "3"{
+                print("Overall Response is:",response)
+                self.category_Served = ((response["category_served"])! as! NSArray).mutableCopy() as! NSMutableArray
+                for i in 0 ..< self.category_Served.count {
+                    if (self.category_Served[i] as! NSDictionary).value(forKey: "user_select") as! Int == 1{
+                    self.category_servedArray.add((self.category_Served[i] as! NSDictionary).value(forKey: "job_cat_id") as! String)
+                        print("category_servedArray is:\(self.category_servedArray)")
+                   }else{
+                    self.not_category_servedArray.add((self.category_Served[i] as! NSDictionary).value(forKey: "job_cat_id") as! String)
+
+                    }
+                }
+                print(self.category_Served)
+
+
+                self.settingsWorkerTableView.reloadData()
+            }else if type == "4" {
+                print("success in professionWorkerAdd:", self.professionWorkerAdd)
+                print("success in professionWorkerDelete:", self.professionWorkerDelete)
+                
+                self.navigationController?.popViewController(animated: true)
+                
+            }else if type == "5" {
+                print("success in professionWorkerAdd:", self.professionWorkerAdd)
+                print("success in professionWorkerDelete:", self.professionWorkerDelete)
+                
+                
+            }
+            
+            
+        }
+        self.constat.stopActivityIndicator(superView: self.view)
+        
+        
+        
+    }
+    
+    func apiCallFail(error: NSError) {
+//        DispatchQueue.main.async() {
+//            self.constat.stopActivityIndicator(superView: self.view)
+//            //            self.constant.stopActivityIndicator(self.view)
+//            let alertController = UIAlertController(title: "Error", message: error.description, preferredStyle: .alert)
+//            
+//            let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction) in
+//                
+//                alertController.dismiss(animated: true, completion: nil)
+//                
+//                
+//            }
+//            alertController.addAction(OKAction)
+//            self.present(alertController, animated: true, completion:nil)
+//        }
+    }
+//
+    func apiCallParsingFail(error: Error) {
+//        self.constat.stopActivityIndicator(superView: view)
+//        DispatchQueue.main.async() {
+//            let alertController = UIAlertController(title: "Error", message: "Parsing error!", preferredStyle: .alert)
+//            
+//            let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction) in
+//                
+//                alertController.dismiss(animated: true, completion: nil)
+//                
+//                
+//            }
+//            alertController.addAction(OKAction)
+//            self.present(alertController, animated: true, completion:nil)
+//        }
+    }
+//
+    func apiCallApiWithFaildStatus(errorMessage: String) {
+//        self.constat.stopActivityIndicator(superView: self.view)
+//        DispatchQueue.main.async() {
+//            let alertController = UIAlertController(title: "Error", message: errorMessage, preferredStyle: .alert)
+//            
+//            let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction) in
+//                
+//                alertController.dismiss(animated: true, completion: nil)
+//                
+//                
+//            }
+//            alertController.addAction(OKAction)
+//            self.present(alertController, animated: true, completion:nil)
+//        }
+    }
+    
+    
+    
+    //    MARK: IBActions
+    
+    @IBAction func actionOnBackButton(_ sender: AnyObject) {
+            if professionWorkerAdd.count >= 1{
+                DispatchQueue.main.async() {
+                    
+//                    let alert: UIAlertView = UIAlertView()
+//                    alert.title = "Exit"
+//                    alert.message = "Are you sure you want to edit these trades?"
+//                    _ = alert.addButton(withTitle: "Ok")
+//                    _ = alert.addButton(withTitle: "Cancel")
+//                    alert.delegate = self  // set the delegate here
+//                    alert.show()
+                    
+                    let api = APICall()
+                    api.apiDelegate = self;
+                    let dict = UserDefaults.standard.object(forKey: "user_Data") as! NSDictionary
+                    print("dictionary data is:\(dict)")
+                    let user_Id = dict.value(forKey: "user_id") as! String
+                    print(user_Id)
+                    
+                    print("not_category_servedArray:",self.not_category_servedArray)
+                    print("category_servedArray:",self.category_servedArray)
+                    
+                    let category_servedStringRepresentation = self.category_servedArray.componentsJoined(by: ",") // "1,2,3"
+                    let not_category_servedStringRepresentation = self.not_category_servedArray.componentsJoined(by: ",") // "1,2,3"
+                    
+                    print("category_servedStringRepresentation",category_servedStringRepresentation)
+                    print("not_category_servedStringRepresentation",not_category_servedStringRepresentation)
+                    
+                    
+                    api.data_request(paramString: "user_id=\(user_Id)&category_served=\(category_servedStringRepresentation)&not_category_served=\(not_category_servedStringRepresentation)", url: "\(OAConstant.apis.server)\(OAConstant.apis.user_served_catgeory)", urlType:"POST", apiCall:"4")
+                    
+                }
+                }else{
+                    self.navigationController?.popViewController(animated: true)
+
+                }
+                
+        }
+    }
+
