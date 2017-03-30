@@ -1,0 +1,195 @@
+//
+//  APICall.swift
+//  APIDemo
+//
+//  Created by Rafeeq on 11/05/16.
+//  Copyright © 2016 Eeshana. All rights reserved.
+//
+
+
+
+import UIKit
+
+protocol APIDelegate {
+    
+    func apiCallSucess(response:Dictionary<String,AnyObject>,type:String) // on success
+    func apiCallFail(error:NSError)  // On network issue
+    func apiCallParsingFail(error:Error) // on parsing error
+    func apiCallApiWithFaildStatus(errorMessage: String)
+    
+}
+
+
+
+class APICall:NSObject {
+    
+    var apiDelegate:APIDelegate?
+    
+    func data_request(paramString:String,url:String,urlType:String,apiCall:String)
+    {
+        let url:NSURL = NSURL(string: url)!
+        let session = URLSession.shared
+        
+        let request = NSMutableURLRequest(url: url as URL)
+        request.httpMethod = urlType// get, post types methods and delete also
+        request.cachePolicy = NSURLRequest.CachePolicy.reloadIgnoringCacheData//CachePolicy.ReloadIgnoringCacheData
+        
+        let paramString = paramString //"data=Hello"
+        
+        
+        request.httpBody = paramString.data(using: String.Encoding.utf8)
+        
+        
+        let task = session.dataTask(with: request as URLRequest) {
+            (
+            data, response, error) in
+            
+            guard let _:NSData = data as NSData?, let _:URLResponse = response  , error == nil else {
+                print("error")
+                if let delegate = self.apiDelegate {
+                    delegate.apiCallFail(error: error! as NSError) // On network issue
+                }
+                
+                return
+            }
+            
+            let json: NSDictionary!
+            do {
+                let jsonString = NSString(data: data!, encoding: String.Encoding.utf8.rawValue) as! String
+                let data = jsonString.data(using: String.Encoding.utf8)
+                json = try JSONSerialization.jsonObject(with: data!, options: JSONSerialization.ReadingOptions.allowFragments) as! NSDictionary
+                let status = json.value(forKey: "status")
+                
+                if (status as AnyObject!).integerValue == 0{
+                    let msg:AnyObject!
+                    msg = "\(json.value(forKey: "error")!)" as AnyObject!
+                    self.apiDelegate!.apiCallApiWithFaildStatus(errorMessage: msg as! String)
+                }
+                else{
+                    if let delegate = self.apiDelegate{
+                        
+                        delegate.apiCallSucess(response: json as! Dictionary<String, AnyObject>,type: apiCall) // On success
+                    }
+                }
+                
+            } catch {
+                if let delegate = self.apiDelegate{
+                    delegate.apiCallParsingFail(error: error)  // On parsing fail
+                }
+                
+            }
+            
+        }
+        
+        task.resume()
+        
+    }
+    
+    func data_request_withImage(imageData:UIImage,imageFIleName:String,boundary:String,paramString:NSDictionary,url:String,urlType:String,apiCall:String)
+    {
+        let url:NSURL = NSURL(string: url)!
+        let session = URLSession.shared
+        
+        let request = NSMutableURLRequest(url: url as URL)
+        request.httpMethod = urlType// get, post types methods and delete also
+        request.cachePolicy = NSURLRequest.CachePolicy.reloadIgnoringCacheData//CachePolicy.ReloadIgnoringCacheData
+        
+        let paramString = paramString //"data=Hello"
+        
+        //        let body=NSMutableData()
+        print(paramString)
+        let boundary1 = generateBoundaryString()
+        
+        request.setValue("multipart/form-data; boundary=\(boundary1)",forHTTPHeaderField: "Content-Type")
+        //        let img = UIImage(named: "a.png")
+//        let imageData = UIImageJPEGRepresentation(imageData, 1)
+        let imageData = UIImageJPEGRepresentation(imageData, 0.0)
+        request.httpBody = createBodyWithParameters(parameters: paramString, filePathKey: imageFIleName, imageDataKey: imageData!, boundary: boundary1) as Data
+        let task = session.dataTask(with: request as URLRequest) {
+            (
+            data, response, error) in
+            
+            guard let _:NSData = data as NSData?, let _:URLResponse = response  , error == nil else {
+                print("error")
+                if let delegate = self.apiDelegate {
+                    delegate.apiCallFail(error: error! as NSError) // On network issue
+                }
+                
+                return
+            }
+            
+            let json: NSDictionary!
+            do {
+                let jsonString = NSString(data: data!, encoding: String.Encoding.utf8.rawValue) as! String
+                let data = jsonString.data(using: String.Encoding.utf8)
+                json = try JSONSerialization.jsonObject(with: data!, options: JSONSerialization.ReadingOptions.allowFragments) as! NSDictionary
+                let status = json.value(forKey: "status")
+                
+                if (status as AnyObject!).integerValue == 0{
+                    let msg:AnyObject!
+                    msg = "\(json.value(forKey: "error")!)" as AnyObject!
+                    self.apiDelegate!.apiCallApiWithFaildStatus(errorMessage: msg as! String)
+                }
+                else{
+                    if let delegate = self.apiDelegate{
+                        
+                        delegate.apiCallSucess(response: json as! Dictionary<String, AnyObject>,type: apiCall) // On success
+                    }
+                }
+                
+            } catch {
+                if let delegate = self.apiDelegate{
+                    delegate.apiCallParsingFail(error: error)  // On parsing fail
+                }
+                
+            }
+            
+        }
+        
+        task.resume()
+        
+    }
+    
+    
+    func generateBoundaryString() -> String {
+        return "Boundary-\(NSUUID().uuidString)"
+    }
+    
+    
+    func createBodyWithParameters(parameters:NSDictionary, filePathKey: String?, imageDataKey: Data, boundary: String) -> NSData {
+        let body = NSMutableData();
+        
+        if parameters != nil {
+            for (key, value) in parameters{
+                body.appendString(string: "--\(boundary)\r\n")
+                body.appendString(string: "Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n")
+                body.appendString(string: "\(value)\r\n")
+            }
+        }
+        
+        let filename = "user-profile.jpg"
+        let mimetype = "image/jpg"
+        
+        body.appendString(string: "--\(boundary)\r\n")
+        body.appendString(string: "Content-Disposition: form-data; name=\"\(filePathKey!)\"; filename=\"\(filename)\"\r\n")
+        body.appendString(string: "Content-Type: \(mimetype)\r\n\r\n")
+        body.append(imageDataKey as Data)
+        body.appendString(string: "\r\n")
+        
+        
+        
+        body.appendString(string: "--\(boundary)--\r\n")
+        
+        return body
+    }
+    
+    
+}
+
+extension NSMutableData {
+    
+    func appendString(string: String) {
+        let data = string.data(using: String.Encoding.utf8, allowLossyConversion: true)
+        append(data!)
+    }
+}
